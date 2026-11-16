@@ -1,0 +1,43 @@
+# Projetos pessoais e estado local
+/workspace/*
+!/workspace/.gitkeep
+.local-data/
+backups/
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.bak
+
+# Dependências e builds
+node_modules/
+frontend/dist/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.egg-info/
+
+# Arquivos temporários e saídas de compilação
+*.log
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.idx
+*.ilg
+*.ind
+.DS_Store
+Thumbs.db

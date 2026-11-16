@@ -1,0 +1,41 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({executablePath:'/usr/bin/chromium',args:['--no-sandbox','--disable-dev-shm-usage']});
+const page=await browser.newPage({viewport:{width:1440,height:960}});
+const errors=[];page.on('pageerror',error=>errors.push(error.message));
+const base=process.env.NEXOTEX_URL||'http://localhost:8000';
+let pid;
+try {
+  await page.goto(base);
+  await page.waitForSelector('#welcomeCreate');
+  page.once('dialog',dialog=>dialog.accept('Verificação de navegador'));
+  await page.click('#welcomeCreate');
+  await page.waitForFunction(()=>document.querySelector('#editor .cm-content')?.textContent.includes('documentclass'));
+  pid=await page.locator('#projects').inputValue();
+  await page.locator('#editor .cm-content').click();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.type('\n% Teste real no navegador');
+  await page.waitForFunction(()=>document.querySelector('#message').textContent==='Salvo no disco');
+  const saved=await page.request.get(`${base}/api/projects/${pid}/file?path=main.tex`);
+  assert((await saved.json()).content.includes('Teste real no navegador'));
+  await page.click('#compile');
+  await page.waitForSelector('#pdf canvas',{timeout:150000});
+  assert((await page.locator('#pages').textContent()).includes('1 /'));
+  await page.click('#theme');
+  const theme=await page.locator('html').getAttribute('data-theme');
+  await page.selectOption('#layout','pdf');
+  await page.selectOption('#layout','split');
+  await page.keyboard.press('Control+Shift+F');
+  assert(await page.locator('body').evaluate(el=>el.classList.contains('focus')));
+  await page.keyboard.press('Control+Shift+F');
+  await page.reload();
+  await page.waitForSelector('#pdf canvas',{timeout:30000});
+  assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+  assert((await page.locator('#editor .cm-content').textContent()).includes('Teste real no navegador'));
+  if(process.env.NEXOTEX_SCREENSHOT)await page.screenshot({path:process.env.NEXOTEX_SCREENSHOT,fullPage:true});
+  assert.deepEqual(errors,[]);
+  console.log('PASS: criação, edição CodeMirror, autosave real, compilação, PDF.js, tema, layouts, foco e recarga sem erros JS.');
+} finally {
+  if(pid)await page.request.delete(`${base}/api/projects/${pid}`);
+  await browser.close();
+}
